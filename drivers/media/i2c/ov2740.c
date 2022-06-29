@@ -32,8 +32,8 @@
 
 /* vertical-timings from sensor */
 #define OV2740_REG_VTS			0x380e
-#define OV2740_VTS_DEF			0x088a
-#define OV2740_VTS_MIN			0x0460
+#define OV2740_VTS_DEF			0x0460
+#define OV2740_VTS_MIN			0x045f
 #define OV2740_VTS_MAX			0x7fff
 
 /* horizontal-timings from sensor */
@@ -87,11 +87,11 @@
 
 /* Pixel array limits */
 #define OV2740_NATIVE_WIDTH			1936
-#define OV2740_NATIVE_HEIGHT		1112
+#define OV2740_NATIVE_HEIGHT		1096
 #define OV2740_NATIVE_START_LEFT	0
 #define OV2740_NATIVE_START_TOP		0
-#define OV2740_ACTIVE_WIDTH			1936
-#define OV2740_ACTIVE_HEIGHT		1096
+#define OV2740_ACTIVE_WIDTH			1920
+#define OV2740_ACTIVE_HEIGHT		1080
 #define OV2740_ACTIVE_START_TOP		8
 #define OV2740_ACTIVE_START_LEFT	8
 
@@ -153,14 +153,19 @@ static const struct ov2740_reg mipi_data_rate_720mbps[] = {
 };
 
 static const struct ov2740_reg mode_1932x1092_regs[] = {
+	/* system control */
 	{0x3000, 0x00},
 	{0x3018, 0x32},
 	{0x3031, 0x0a},
 	{0x3080, 0x08},
 	{0x3083, 0xB4},
+
+	/* SCCB control */
 	{0x3103, 0x00},
 	{0x3104, 0x01},
 	{0x3106, 0x01},
+
+	/* MEC/MGC (manual exposure/gain control) */
 	{0x3500, 0x00},
 	{0x3501, 0x44},
 	{0x3502, 0x40},
@@ -173,6 +178,8 @@ static const struct ov2740_reg mode_1932x1092_regs[] = {
 	{0x3510, 0x00},
 	{0x3511, 0x00},
 	{0x3512, 0x20},
+
+	/* analog control */
 	{0x3632, 0x00},
 	{0x3633, 0x10},
 	{0x3634, 0x10},
@@ -192,6 +199,8 @@ static const struct ov2740_reg mode_1932x1092_regs[] = {
 	{0x3667, 0x78},
 	{0x3669, 0x0a},
 	{0x366a, 0x92},
+
+	/* sensor control */
 	{0x3700, 0x54},
 	{0x3702, 0x10},
 	{0x3706, 0x42},
@@ -216,26 +225,18 @@ static const struct ov2740_reg mode_1932x1092_regs[] = {
 	{0x37c2, 0x04},
 	{0x37c5, 0x00},
 	{0x37c8, 0x00},
-	{0x3800, 0x00},
-	{0x3801, 0x02},
-	{0x3802, 0x00},
-	{0x3803, 0x0a},
-	{0x3804, 0x07},
-	{0x3805, 0x8e},
-	{0x3806, 0x04},
-	{0x3807, 0x4e},
-	{0x3808, 0x07},
-	{0x3809, 0x8c},
-	{0x380a, 0x04},
-	{0x380b, 0x44},
-	{0x380c, 0x04},
-	{0x380d, 0x38},
-	{0x380e, 0x04},
-	{0x380f, 0x60},
-	{0x3810, 0x00},
-	{0x3811, 0x04},
-	{0x3812, 0x00},
-	{0x3813, 0x04},
+
+	/* timing control */
+	{0x3800, 0x00}, {0x3801, 0x00}, /* H_CROP_START: 0 */
+	{0x3802, 0x00}, {0x3803, 0x00}, /* V_CROP_START: 0 */
+	{0x3804, 0x07}, {0x3805, 0x8f}, /* H_CROP_END: 1935 */
+	{0x3806, 0x04}, {0x3807, 0x47}, /* V_CROP_END: 1095 */
+	{0x3808, 0x07}, {0x3809, 0x90}, /* H_OUTPUT_SIZE: 1936 */
+	{0x380a, 0x04}, {0x380b, 0x48}, /* V_OUTPUT_SIZE: 1096 */
+	{0x380c, 0x08}, {0x380d, 0x88}, /* TIMING_HTS: 2184 */
+	{0x380e, 0x04}, {0x380f, 0x44}, /* TIMING_VTS: 1092 */
+	{0x3810, 0x00}, {0x3811, 0x00}, /* H_WIN_OFF: 0 */
+	{0x3812, 0x00}, {0x3813, 0x00}, /* V_WIN_OFF: 0 */
 	{0x3814, 0x01},
 	{0x3815, 0x01},
 	{0x3820, 0x80},
@@ -251,7 +252,11 @@ static const struct ov2740_reg mode_1932x1092_regs[] = {
 	{0x383a, 0x00},
 	{0x383b, 0x08},
 	{0x383c, 0x00},
+
+	/* PSRAM control */
 	{0x3f0b, 0x00},
+
+	/* BLC control */
 	{0x4001, 0x20},
 	{0x4009, 0x07},
 	{0x4003, 0x10},
@@ -259,6 +264,8 @@ static const struct ov2740_reg mode_1932x1092_regs[] = {
 	{0x4016, 0x00},
 	{0x4017, 0x10},
 	{0x4044, 0x02},
+
+	/* ... */
 	{0x4304, 0x08},
 	{0x4307, 0x30},
 	{0x4320, 0x80},
@@ -312,9 +319,10 @@ static const struct ov2740_link_freq_config link_freq_configs[] = {
 
 static const struct ov2740_mode supported_modes[] = {
 	{
-		.width = 1932,
-		.height = 1092,
-		.hts = 1080,
+		.width = 1936,
+		.height = 1096,
+		/* .hts = 2184, */
+		.hts = 540,
 		.vts_def = OV2740_VTS_DEF,
 		.vts_min = OV2740_VTS_MIN,
 		.reg_list = {
